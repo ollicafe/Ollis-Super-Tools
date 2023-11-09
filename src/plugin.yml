@@ -1,0 +1,9 @@
+main: com.ollicafe.ollissupertools.OllisSuperTools
+name: OllisSuperTools
+version: 1.0
+author: olli
+website: ollicafe.com
+description: This plugin gives super versions of familiar tools
+api-version: 1.16
+
+commands:
