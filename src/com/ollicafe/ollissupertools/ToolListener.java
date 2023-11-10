@@ -154,11 +154,9 @@ public class ToolListener implements Listener{
 					blockList.add(block);
 				}
 				tempBlockList.clear();
-				player.sendMessage("Next Loop");
 				//Ends the loop once all logs are iterated through
 				if(blockList.isEmpty()) {
 					cancel();
-					player.sendMessage("Done");
 				}
 				count++;
 			}
