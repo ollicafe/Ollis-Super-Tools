@@ -1,7 +1,6 @@
 package com.ollicafe.ollissupertools;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -11,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -24,7 +24,7 @@ public class ToolListener implements Listener{
 	}
 	
 	@EventHandler
-	public void onPickaxe(BlockBreakEvent e) {
+	public void onBreakBlock(BlockBreakEvent e) {
 		Player player = e.getPlayer();
 		if(player==null)return;
 		ItemStack item = player.getInventory().getItemInMainHand();
@@ -44,10 +44,15 @@ public class ToolListener implements Listener{
 			}
 			break;
 		case NETHERITE_HOE:
+			harvestSuper(e.getBlock(),player);
 			break;
 		}
 	}
 	
+	@EventHandler
+	public void onRightClick(PlayerInteractEvent e) {
+		
+	}
 	
 	private BlockFace getFaceLookingAt(Location loc) {
 		float pitch = loc.getPitch();
@@ -74,7 +79,7 @@ public class ToolListener implements Listener{
 		int x = block.getX();
 		int y = block.getY();
 		int z = block.getZ();
-		
+		//One day I'll change this to be a for loop instead
 		switch(face) {
 		case UP:
 		case DOWN:
@@ -115,7 +120,8 @@ public class ToolListener implements Listener{
 		}
 	}
 	
-	private void harvestSuper() {
+	private void harvestSuper(Block block, Player player) {
+		
 		
 	}
 	
@@ -124,15 +130,13 @@ public class ToolListener implements Listener{
 	}
 	
 	private void breakTree(Block startBlock, Player player) {
-		
-
+		//Initializing our lists
 		ArrayList<Block> blockList = new ArrayList<Block>();
 		ArrayList<Block> tempBlockList = new ArrayList<Block>();
 		blockList.add(startBlock);
+		//Creating a runnable so the server doesn't freeze processing a huge tree
 		new BukkitRunnable() {
-			BlockFace faces[] = {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST,
-					BlockFace.UP, BlockFace.DOWN};
-			int count = 0;
+			int count = 0; //Create count to make sure we don't mine too much
 			public void run() {
 				for(Block block: blockList) {
 					for(int i = -1; i <= 1;i++) {
@@ -143,7 +147,8 @@ public class ToolListener implements Listener{
 									if(b.getType().toString()!=null)
 										if(b.getType().toString().endsWith("LOG"))
 											if(!blockList.contains(b)) 
-												tempBlockList.add(b);
+												if(!tempBlockList.contains(b))
+													tempBlockList.add(b);
 							}
 						}
 					}
@@ -154,8 +159,9 @@ public class ToolListener implements Listener{
 					blockList.add(block);
 				}
 				tempBlockList.clear();
+				
 				//Ends the loop once all logs are iterated through
-				if(blockList.isEmpty()) {
+				if(blockList.isEmpty() || count >= 64) {
 					cancel();
 				}
 				count++;
@@ -163,6 +169,7 @@ public class ToolListener implements Listener{
 		}.runTaskTimer(plugin.getPlugin(plugin.getClass()), 0 ,0);
 		
 	}
+
 	
 
 }
