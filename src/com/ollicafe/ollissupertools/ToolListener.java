@@ -1,16 +1,21 @@
 package com.ollicafe.ollissupertools;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Ageable;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -44,13 +49,29 @@ public class ToolListener implements Listener{
 			}
 			break;
 		case NETHERITE_HOE:
-			harvestSuper(e.getBlock(),player);
+			//harvestSuper(e.getBlock(),player);
 			break;
 		}
 	}
 	
 	@EventHandler
 	public void onRightClick(PlayerInteractEvent e) {
+		//For the Super Hoe
+		//Flood scans a field to harvest and replace full grown crops
+		if(!e.getAction().equals(Action.RIGHT_CLICK_BLOCK)) return;
+		if(!e.getHand().equals(EquipmentSlot.HAND)) return;
+		Block block = e.getClickedBlock();
+		Player player = e.getPlayer();
+		if(player==null)return;
+		ItemStack item = player.getInventory().getItemInMainHand();
+		if(!item.hasItemMeta()) return;
+		if(!item.getItemMeta().hasLore()) return;
+		if(!item.getItemMeta().getLore().contains("Super")) return;
+		switch(item.getType()) {
+		case NETHERITE_HOE:
+			harvestSuper(block,player);
+			break;
+		}
 		
 	}
 	
@@ -120,13 +141,78 @@ public class ToolListener implements Listener{
 		}
 	}
 	
-	private void harvestSuper(Block block, Player player) {
-		
+	private void harvestSuper(Block startBlock, Player player) {
+		//List of the harvestable crops
+		List<Material> crops = new ArrayList<Material>();
+		crops.add(Material.WHEAT);
+		crops.add(Material.POTATOES);
+		crops.add(Material.CARROTS);
+		crops.add(Material.BEETROOTS);
+		//Cancel if block isn't a crop
+		if(!crops.contains(startBlock.getType())) return;
+		//Initializing our lists
+		ArrayList<Block> blockList = new ArrayList<Block>();
+		ArrayList<Block> tempBlockList = new ArrayList<Block>();
+		blockList.add(startBlock);
+		//Creating a runnable so the server doesn't freeze processing a huge farm
+		new BukkitRunnable() {
+			int count = 0; //Create count to make sure we don't mine too much
+			int harvested = 0;
+			public void run() {
+				for(Block block: blockList) {
+					for(int i = -1; i <= 1;i++) {
+						for(int j = -1; j <= 1;j++) {
+							for(int k = -1; k <= 1;k++) {
+								Block b = block.getRelative(i,j,k);
+								if(blockList.size() >= 1024 || tempBlockList.size() >= 1024) {
+									plugin.getLogger().info("Super Hoe reached limit of blocks");
+									player.sendMessage("Limit reached");
+									cancel();
+								}
+								if(harvested >= 64) cancel();
+								if(b != null)
+									if(b.getType().toString()!=null) 
+										if(crops.contains(b.getType()))
+											if(!blockList.contains(b)) 
+												if(!tempBlockList.contains(b)) {
+													player.sendMessage("added " + b.getType().toString());
+													tempBlockList.add(b);
+													harvested++;
+												}
+							}
+						}
+					}
+					harvestBlock(block,player);
+					player.sendMessage("on Block: "+ block.getType().toString());
+				}
+				blockList.clear();
+				for(Block block:tempBlockList) {
+					blockList.add(block);
+				}
+				tempBlockList.clear();
+				
+				//Ends the loop once all logs are iterated through
+				if(blockList.isEmpty() || count >= 128 || harvested >= 64) {
+					cancel();
+				}
+				count++;
+			}
+		}.runTaskTimer(plugin.getPlugin(plugin.getClass()), 0 ,0);
 		
 	}
 	
 	private void mineBlock(Block block, Player player) {
 		block.breakNaturally(player.getInventory().getItemInMainHand());
+	}
+	
+	private void harvestBlock(Block block, Player player) {
+		Material type = block.getType();
+		Ageable ageData = (Ageable) block.getBlockData();
+		if(ageData.getAge()==ageData.getMaximumAge()) {
+			block.breakNaturally(player.getInventory().getItemInMainHand());
+			block.setType(type);
+			
+		}
 	}
 	
 	private void breakTree(Block startBlock, Player player) {
@@ -143,6 +229,12 @@ public class ToolListener implements Listener{
 						for(int j = -1; j <= 1;j++) {
 							for(int k = -1; k <= 1;k++) {
 								Block b = block.getRelative(i,j,k);
+								if(blockList.size() >= 256 ||
+										tempBlockList.size() >= 256) {
+									plugin.getLogger().info("Super Axe reached limit of blocks");
+									player.sendMessage("Limit reached");
+									cancel();
+									}
 								if(b != null)
 									if(b.getType().toString()!=null)
 										if(b.getType().toString().endsWith("LOG"))
